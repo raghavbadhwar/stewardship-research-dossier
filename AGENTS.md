@@ -8,7 +8,7 @@ It is a candidate portfolio project informed by public AI, risk and stewardship 
 
 ## Current stage
 
-The repository is at foundation stage. Only the package scaffold, local developer environment and CLI smoke checks exist until individual plan tasks are implemented and tested.
+The repository is an in-progress local candidate prototype. Use the approved plan task and focused tests before changing a module; do not treat local verification as host or production proof.
 
 The approved documents are outside this repository at:
 

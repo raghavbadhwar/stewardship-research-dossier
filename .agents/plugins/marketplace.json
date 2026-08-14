@@ -1,0 +1,20 @@
+{
+  "name": "stewardship-research-dossier-local",
+  "interface": {
+    "displayName": "Stewardship Research Dossier Local"
+  },
+  "plugins": [
+    {
+      "name": "stewardship-research-dossier",
+      "source": {
+        "source": "local",
+        "path": "../.."
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

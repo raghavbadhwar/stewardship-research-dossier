@@ -1,0 +1,20 @@
+[
+  {
+    "url": "https://www.microsoft.com/en-us/Investor/corporate-governance/framework",
+    "title": "Microsoft Investor Relations — Corporate Governance Framework",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-15T09:00:00+00:00",
+    "text_file": "S-0003.txt",
+    "content_sha256": "01ad37ca95bb4666ce152400461fee2076cc57c35326c236b5cee7ec684338d7"
+  },
+  {
+    "url": "https://www.microsoft.com/en-us/Investor/corporate-governance/policies",
+    "title": "Microsoft Investor Relations — Corporate Governance Policies and Guidelines",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-15T09:05:00+00:00",
+    "text_file": "S-0004.txt",
+    "content_sha256": "7106128acffd29658527c002f017863e711c80b901e6cd19ef142b66d0eaf42f"
+  }
+]

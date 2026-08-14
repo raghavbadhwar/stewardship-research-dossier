@@ -1,0 +1,20 @@
+[
+  {
+    "url": "https://www.microsoft.com/en-us/Investor/corporate-governance/framework",
+    "title": "Microsoft Investor Relations — Corporate Governance Framework",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-14T09:00:00+00:00",
+    "text_file": "S-0001.txt",
+    "content_sha256": "7501cfea38ee3f6322474ea4bceebb2b418830406094324c37e33552453663ec"
+  },
+  {
+    "url": "https://www.microsoft.com/investor/reports/ar24/",
+    "title": "Microsoft 2024 Annual Report",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-14T09:05:00+00:00",
+    "text_file": "S-0002.txt",
+    "content_sha256": "c309ca6b9815a61fa4e6d6ed20f73d774ddb6b456d4514af50a45c66e6c1dd13"
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "name": "stewardship-research-dossier",
+  "version": "0.1.0",
+  "description": "Local source-linked stewardship research briefs for coding-agent hosts.",
+  "author": {
+    "name": "Raghav Badhwar"
+  },
+  "license": "MIT"
+}

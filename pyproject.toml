@@ -5,43 +5,31 @@ description = "Local, source-linked stewardship research dossiers for coding-age
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = "MIT"
-authors = [{ name = "Raghav Badhwar" }]
-keywords = ["ai-agents", "mcp", "research", "stewardship"]
-classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
-  "Intended Audience :: Developers",
-  "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3.12",
-]
-dependencies = [
-  "typer>=0.12,<1",
-]
-
+dependencies = ["httpx>=0.27,<1", "mcp>=1.27,<2", "pydantic>=2.8,<3", "pymupdf>=1.24,<2", "trafilatura>=1.12,<3", "typer>=0.12,<1"]
 [project.scripts]
-srd = "srd.cli:main"
+srd = "srd.cli:app"
+srd-mcp = "srd.mcp_server:main"
 
-[dependency-groups]
-dev = [
-  "mypy>=1.11,<2",
-  "pytest>=8.3,<9",
-  "ruff>=0.6,<1",
+[project.optional-dependencies]
+rendered = [
+    "scrapling[fetchers]>=0.4,<1",
 ]
-
+[dependency-groups]
+dev = ["mypy>=1.11,<2", "pytest>=8.3,<9", "ruff>=0.6,<1"]
 [build-system]
 requires = ["hatchling>=1.25,<2"]
 build-backend = "hatchling.build"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/srd"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
 [tool.mypy]
 python_version = "3.12"
 strict = true
 packages = ["srd"]
-
 [tool.ruff]
+exclude = ["plans", "specs"]
 target-version = "py312"
 line-length = 100
+[tool.ruff.lint]
+ignore = ["BLE001"]
