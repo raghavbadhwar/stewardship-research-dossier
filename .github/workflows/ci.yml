@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.15"
+          python-version: "3.12"
+
+      - name: Install locked dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Verify package
+        run: |
+          uv lock --check
+          uv run srd --version
+          uv run srd doctor
+          uv run pytest -q
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run mypy src
