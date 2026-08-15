@@ -14,7 +14,16 @@ import typer
 
 from srd import __version__
 from srd.delta import compare_runs
-from srd.models import CaseOpenRequest, Finding, ResearchPacket, SourceCapture, validate_case_key
+from srd.diagnostics import build_diagnostics
+from srd.models import (
+    CaseOpenRequest,
+    EvidenceCitation,
+    Finding,
+    ResearchPacket,
+    SourceCapture,
+    validate_case_key,
+    validate_run_id,
+)
 from srd.packets import render_brief, save_packet
 from srd.store import CaseStore
 
@@ -28,6 +37,16 @@ def _version(value: bool) -> None:
     if value:
         typer.echo(f"srd {__version__}")
         raise typer.Exit()
+
+
+@app.command("diagnostics")
+def diagnostics(run_id: str, root: Path = DEFAULT_ROOT) -> None:
+    try:
+        run_id = validate_run_id(run_id)
+        result = build_diagnostics(CaseStore(root), run_id)
+    except Exception as error:
+        raise typer.BadParameter(str(error)) from error
+    typer.echo(result.model_dump_json(indent=2))
 
 
 @app.callback()
@@ -64,84 +83,199 @@ def _import_fixture_sources(
     return captured
 
 
+def _cite(source: SourceCapture, locator: str, excerpt: str) -> EvidenceCitation:
+    return EvidenceCitation(source_id=source.source_id, locator=locator, excerpt=excerpt)
+
+
 def run_fixture_demo(root: Path) -> tuple[Path, Path]:
     store = CaseStore(root)
     req = CaseOpenRequest(
         case_key="fixture-governance-2026",
         issuer_name="Microsoft Corporation",
-        question="Does the frozen public evidence merit deeper governance review?",
+        question=(
+            "Do Microsoft’s public disclosures identify board-level oversight mechanisms "
+            "for material AI-related risks, and what remains unresolved for stewardship review?"
+        ),
         theme="governance",
-        reference_date=date(2026, 8, 14),
+        reference_date=date(2026, 8, 1),
     )
     if store.case_path(req.case_key).exists():
         raise FileExistsError("Fixture demo case already exists; choose a new --root.")
     store.open_case(req)
     r1 = store.start_run(req.case_key, req.reference_date)
     store.transition(r1.run_id, "COLLECTING")
-    a, b = _import_fixture_sources(store, r1.run_id, "case_001")
+    framework, reporting, annual = _import_fixture_sources(store, r1.run_id, "case_001")
     store.transition(r1.run_id, "SYNTHESIS_PENDING")
     p = ResearchPacket(
         thesis=[
             Finding(
-                statement="The frozen governance framework excerpt describes board oversight.",
-                source_ids=[a.source_id],
+                finding_id="T-001",
+                statement=(
+                    "Microsoft's public disclosures identify board-level oversight mechanisms "
+                    "for responsible AI-related policy and risk."
+                ),
+                citations=[
+                    _cite(
+                        framework,
+                        "Purpose",
+                        "Through oversight, review, and counsel, Microsoft’s Board of Directors "
+                        "works with management to establish and promote business goals, "
+                        "organizational objectives, and a strategy that is mindful of how our "
+                        "business affects and is affected by the broader environment.",
+                    ),
+                    _cite(
+                        reporting,
+                        "Environmental, Social, and Public Policy Committee",
+                        "The charter for the Microsoft Environmental, Social, and Public Policy "
+                        "Committee includes assisting the Board of Directors in overseeing the "
+                        "company’s “policies and programs and related risks that concern "
+                        "environmental sustainability, the social and public policy impacts of "
+                        "technology including privacy, digital safety, and responsible artificial "
+                        "intelligence, and legal, regulatory, and compliance matters relating to "
+                        "competition / antitrust, trade, and national security.”",
+                    ),
+                ],
                 confidence="medium",
             )
         ],
         counter_view=[
             Finding(
-                statement="The frozen annual-report excerpt identifies material uncertainty.",
-                source_ids=[b.source_id],
+                finding_id="C-001",
+                statement=(
+                    "Public disclosure does not establish operating effectiveness or show what "
+                    "evidence the Board receives about AI-risk controls."
+                ),
+                citations=[
+                    _cite(
+                        reporting,
+                        "Reporting our progress",
+                        "ESG materiality in our reporting does not directly correspond to the "
+                        "concept of materiality used in securities law.",
+                    )
+                ],
                 confidence="medium",
+                contradicts=["T-001"],
             )
         ],
         risks=[
             Finding(
-                statement="The limited frozen excerpts may omit relevant context.",
-                source_ids=[b.source_id],
+                finding_id="R-001",
+                statement=(
+                    "The annual report says regulatory applicability can be unclear, change over "
+                    "time, and vary across jurisdictions."
+                ),
+                citations=[
+                    _cite(
+                        annual,
+                        "Government regulation",
+                        "How these laws and regulations apply to our business is often unclear, "
+                        "subject to change over time, and sometimes may be inconsistent from "
+                        "jurisdiction to jurisdiction.",
+                    )
+                ],
                 confidence="low",
             )
         ],
-        open_questions=["Do later public disclosures alter the review scope?"],
+        open_questions=[
+            (
+                "What evidence does the Board receive to test whether AI-risk controls operate "
+                "effectively?"
+            )
+        ],
     )
-    save_packet(store, r1.run_id, p, "Review the source-linked public evidence with a human lead.")
+    save_packet(
+        store,
+        r1.run_id,
+        p,
+        "Investigate what evidence the Board receives about AI-risk control effectiveness.",
+    )
     brief = render_brief(store, r1.run_id)
-    r2 = store.start_run(req.case_key, date(2026, 8, 15))
+    r2 = store.start_run(req.case_key, date(2026, 8, 14))
     store.transition(r2.run_id, "COLLECTING")
-    a2, c = _import_fixture_sources(store, r2.run_id, "case_002")
+    reporting_2, framework_2, transparency = _import_fixture_sources(store, r2.run_id, "case_002")
     store.transition(r2.run_id, "SYNTHESIS_PENDING")
     p2 = ResearchPacket(
         thesis=[
             Finding(
-                statement="The later frozen governance excerpt contains changed wording.",
-                source_ids=[a2.source_id],
+                finding_id="T-001",
+                statement=(
+                    "The later capture continues to identify a Board committee remit covering "
+                    "responsible artificial intelligence and adds explicit framework references "
+                    "to risk oversight."
+                ),
+                citations=[
+                    _cite(
+                        reporting_2,
+                        "Environmental, Social, and Public Policy Committee",
+                        "responsible artificial intelligence",
+                    ),
+                    _cite(
+                        framework_2,
+                        "Framework practices",
+                        "Risk oversight",
+                    ),
+                ],
                 confidence="medium",
             )
         ],
         counter_view=[
             Finding(
-                statement="The policy excerpt adds governance context not present in run 0001.",
-                source_ids=[c.source_id],
+                finding_id="C-001",
+                statement=(
+                    "The added transparency-report page describes responsible-AI work at a high "
+                    "level but does not resolve the Board-evidence question."
+                ),
+                citations=[
+                    _cite(
+                        transparency,
+                        "Responsible AI Transparency Report",
+                        "Discover how we build AI systems and models responsibly, support our "
+                        "customers, learn, evolve, and grow in our responsible AI work.",
+                    )
+                ],
                 confidence="medium",
+                contradicts=["T-001"],
             )
         ],
         risks=[
             Finding(
-                statement="The frozen excerpts remain incomplete evidence.",
-                source_ids=[c.source_id],
+                finding_id="R-001",
+                statement=(
+                    "The reporting scope remains distinct from securities-law materiality and "
+                    "should not be treated as outcome evidence."
+                ),
+                citations=[
+                    _cite(
+                        reporting_2,
+                        "Reporting our progress",
+                        "ESG materiality in our reporting does not directly correspond to the "
+                        "concept of materiality used in securities law.",
+                    )
+                ],
                 confidence="low",
             )
         ],
-        open_questions=["Should the lead inspect the cited primary documents in full?"],
+        open_questions=[
+            (
+                "Does the Board receive evidence sufficient to test the effectiveness of AI-risk "
+                "controls?"
+            )
+        ],
     )
-    save_packet(store, r2.run_id, p2, "Revisit the source-linked evidence with a human lead.")
+    save_packet(
+        store,
+        r2.run_id,
+        p2,
+        "Determine whether the Board receives evidence sufficient to test AI-risk controls.",
+    )
     render_brief(store, r2.run_id)
     compare_runs(
         store,
         req.case_key,
         r1.run_id,
         r2.run_id,
-        "Revisit the frozen evidence; no conclusion is automated.",
+        "Investigate whether the Board receives evidence sufficient to test the effectiveness "
+        "of AI-risk controls; no decision is automated.",
     )
     return brief, store.run_path(r2.run_id) / "delta-from-0001.md"
 
@@ -162,13 +296,7 @@ def doctor(root: Path = DEFAULT_ROOT) -> None:
     except OSError as e:
         typer.echo(f"srd doctor: {e}", err=True)
         raise typer.Exit(1)
-    try:
-        import scrapling  # noqa: F401
-
-        rendered_status = "available"
-    except ImportError:
-        rendered_status = "not installed (optional: uv sync --extra rendered)"
-    typer.echo(f"srd doctor: ok (Python 3.12; Scrapling {rendered_status})")
+    typer.echo("srd doctor: ok (Python 3.12)")
 
 
 @app.command("fixture-demo")
@@ -186,13 +314,9 @@ def fixture_demo(
 def export(case_key: str, destination: Path, root: Path = DEFAULT_ROOT) -> None:
     try:
         case_key = validate_case_key(case_key)
+        dest = CaseStore(root).export_case(case_key, destination)
     except Exception as error:
         raise typer.BadParameter(str(error)) from error
-    source = CaseStore(root).case_path(case_key).resolve()
-    dest = destination.expanduser().resolve()
-    if dest.exists():
-        raise typer.BadParameter("destination already exists")
-    shutil.copytree(source, dest)
     typer.echo(str(dest))
 
 

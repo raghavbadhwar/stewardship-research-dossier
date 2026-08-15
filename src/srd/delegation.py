@@ -46,7 +46,9 @@ ROLE_OBJECTIVES = {
 
 
 def plan_delegation(
-    request: DelegationRequest, sources: list[str], run_id: str = ""
+    request: DelegationRequest,
+    sources: list[str],
+    run_id: str = "",
 ) -> DelegationPlan:
     cap = (
         4

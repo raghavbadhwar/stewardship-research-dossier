@@ -1,6 +1,6 @@
 [project]
 name = "stewardship-research-dossier"
-version = "0.1.0"
+version = "0.3.3"
 description = "Local, source-linked stewardship research dossiers for coding-agent hosts."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -10,10 +10,6 @@ dependencies = ["httpx>=0.27,<1", "mcp>=1.27,<2", "pydantic>=2.8,<3", "pymupdf>=
 srd = "srd.cli:app"
 srd-mcp = "srd.mcp_server:main"
 
-[project.optional-dependencies]
-rendered = [
-    "scrapling[fetchers]>=0.4,<1",
-]
 [dependency-groups]
 dev = ["mypy>=1.11,<2", "pytest>=8.3,<9", "ruff>=0.6,<1"]
 [build-system]
@@ -28,7 +24,7 @@ python_version = "3.12"
 strict = true
 packages = ["srd"]
 [tool.ruff]
-exclude = ["plans", "specs"]
+exclude = ["plans", "specs", "third_party"]
 target-version = "py312"
 line-length = 100
 [tool.ruff.lint]

@@ -1,0 +1,5 @@
+Government regulation
+
+How these laws and regulations apply to our business is often unclear, subject to change over time, and sometimes may be inconsistent from jurisdiction to jurisdiction.
+
+To comply with the accelerating global regulatory obligations, we established a regulatory governance framework and to create a repeatable system-focused approach to regulatory governance with an initial focus on four domains: Responsible AI, Privacy, Digital Safety, and Cybersecurity. Through the framework, our legal and regulatory subject matter experts ingest regulations, develop standards and implementation guidance, and, when appropriate, work with our engineers to develop and implement products to monitor compliance. Our business teams, with legal support, manage the compliance programs and prepare external regulatory and commercial reporting, and our internal audit teams conduct reviews of our programs and processes.

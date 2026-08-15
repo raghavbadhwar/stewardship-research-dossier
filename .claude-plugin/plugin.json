@@ -1,7 +1,7 @@
 {
   "name": "stewardship-research-dossier",
-  "version": "0.1.0",
-  "description": "Local source-linked stewardship research briefs for coding-agent hosts.",
+  "version": "0.3.3",
+  "description": "Discover public leads and prepare source-linked stewardship research drafts for analyst approval.",
   "author": {
     "name": "Raghav Badhwar"
   },

@@ -24,6 +24,17 @@ def test_fixture_demo_uses_frozen_metadata_and_never_uses_network(
 
     first_brief, delta = run_fixture_demo(tmp_path)
 
-    assert "## Counter-view" in first_brief.read_text()
-    assert "## Counter-view" in (delta.parent / "brief.md").read_text()
-    assert "## Superseded" in delta.read_text()
+    first_text = first_brief.read_text()
+    later_text = (delta.parent / "brief.md").read_text()
+    delta_text = delta.read_text()
+    delta_data = json.loads(delta.with_suffix(".json").read_text())
+    combined = f"{first_text}\n{later_text}\n{delta_text}"
+
+    assert "Environmental, Social, and Public Policy Committee" in first_text
+    assert "public disclosure does not establish operating effectiveness" in first_text.lower()
+    assert "> [S-" in first_text
+    assert "## Withdrawn" in delta_text
+    assert all(delta_data[key] for key in ("added", "withdrawn", "superseded", "unchanged"))
+    assert "investment recommendation" not in combined.lower()
+    assert "engagement recommendation" not in combined.lower()
+    assert "voting recommendation" not in combined.lower()

@@ -1,1 +1,11 @@
-Frozen excerpt from the Microsoft corporate-governance framework: its board uses oversight, review, and counsel to promote business goals and accountability. This local fixture is intentionally limited to this captured excerpt.
+Corporate Governance
+
+Purpose
+
+Through oversight, review, and counsel, Microsoft’s Board of Directors works with management to establish and promote business goals, organizational objectives, and a strategy that is mindful of how our business affects and is affected by the broader environment.
+
+Corporate governance at Microsoft:
+
+- Provides a structure for management and the Board to set objectives and monitor performance
+- Strengthens and safeguards our culture of business integrity and responsible business practices
+- Encourages the efficient use of resources, and requires accountability for stewardship of those resources

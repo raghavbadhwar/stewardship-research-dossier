@@ -62,13 +62,56 @@ class PacketIncomplete(SrdError):
         super().__init__("PACKET_INCOMPLETE", message)
 
 
+class EvidenceExcerptMismatch(SrdError):
+    def __init__(self, source_id: str) -> None:
+        super().__init__(
+            "EVIDENCE_EXCERPT_MISMATCH",
+            f"The cited excerpt was not found in source {source_id}.",
+        )
+
+
+class ArtifactUnavailable(SrdError):
+    def __init__(self, path: str) -> None:
+        super().__init__("ARTIFACT_UNAVAILABLE", f"Stored artifact is unavailable: {path}.")
+
+
 class RunNotComparable(SrdError):
     def __init__(self, run_id: str) -> None:
         super().__init__("RUN_NOT_COMPARABLE", f"Run {run_id} is not complete or packet-backed.")
 
 
-class OptionalDependencyMissing(SrdError):
-    def __init__(self, name: str) -> None:
+class DiscoveryUnavailable(SrdError):
+    def __init__(self, message: str = "Recent discovery is unavailable.") -> None:
+        super().__init__("DISCOVERY_UNAVAILABLE", message)
+
+
+class DiscoveryTimeout(SrdError):
+    def __init__(self) -> None:
+        super().__init__("DISCOVERY_TIMEOUT", "Recent discovery exceeded its 90-second limit.")
+
+
+class DiscoveryOutputTooLarge(SrdError):
+    def __init__(self) -> None:
         super().__init__(
-            "OPTIONAL_DEPENDENCY_MISSING", f"Optional dependency {name} is unavailable."
+            "DISCOVERY_OUTPUT_TOO_LARGE", "Recent discovery output exceeded its limit."
         )
+
+
+class DiscoveryOutputInvalid(SrdError):
+    def __init__(self) -> None:
+        super().__init__("DISCOVERY_OUTPUT_INVALID", "Recent discovery returned invalid JSON data.")
+
+
+class DraftNotFound(SrdError):
+    def __init__(self) -> None:
+        super().__init__("DRAFT_NOT_FOUND", "No packet draft was saved for this run.")
+
+
+class DraftNotApprovable(SrdError):
+    def __init__(self, message: str = "The packet draft cannot be approved.") -> None:
+        super().__init__("DRAFT_NOT_APPROVABLE", message)
+
+
+class PacketNotApproved(SrdError):
+    def __init__(self) -> None:
+        super().__init__("PACKET_NOT_APPROVED", "Analyst approval is required before rendering.")

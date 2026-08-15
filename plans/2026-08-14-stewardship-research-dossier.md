@@ -1,5 +1,7 @@
 # Stewardship Research Dossier Implementation Plan
 
+> **Superseded implementation record:** The completed core-upgrade design and plan under `docs/superpowers/` replace this original bootstrap plan where they differ, including required evidence citations, static-only pinned retrieval, and four-way deltas.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a local, host-native research-dossier prototype that captures public evidence, retains an explicit counter-view, renders a cited brief, and compares later research runs for Codex and Claude Code.
@@ -767,4 +769,5 @@ Stop after Task 7 and run a single-lead case before adding any plugin wrappers. 
 - Every P0 requirement from the PRD maps to a numbered task above.
 - Source capture, packet validation, delta comparison, delegation caps, MCP envelopes, plugin files and offline fixtures each have focused tests.
 - The plan uses no hosted service, scheduler, agent framework or browser dependency.
+
 - Commit and external-action steps require explicit user approval, consistent with the project operating rules.

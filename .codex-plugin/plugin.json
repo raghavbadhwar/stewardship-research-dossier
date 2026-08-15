@@ -1,7 +1,7 @@
 {
   "name": "stewardship-research-dossier",
-  "version": "0.1.0",
-  "description": "Local source-linked stewardship research briefs for coding-agent hosts.",
+  "version": "0.3.3",
+  "description": "Discover public leads and prepare source-linked stewardship research drafts for analyst approval.",
   "author": {
     "name": "Raghav Badhwar"
   },
@@ -10,13 +10,13 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Stewardship Research Dossier",
-    "shortDescription": "Local cited governance briefs",
-    "longDescription": "Capture public evidence locally, retain a counter-view, and compare later runs.",
+    "shortDescription": "Cited research with analyst approval",
+    "longDescription": "Discover public leads, capture evidence locally, retain a counter-view, and require analyst approval before rendering.",
     "developerName": "Raghav Badhwar",
     "category": "Productivity",
     "capabilities": ["Interactive"],
     "defaultPrompt": [
-      "Create a source-linked local governance brief."
+      "Research my request immediately when its scope is sufficient; otherwise ask only the material question needed before preparing a source-linked draft for my approval."
     ]
   }
 }

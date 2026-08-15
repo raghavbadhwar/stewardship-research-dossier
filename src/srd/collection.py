@@ -7,19 +7,31 @@ import ipaddress
 import socket
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 import httpx
 import trafilatura
 
-from .errors import ExtractionFailed, SourceUnavailable, SrdError, UnsupportedContentType
-from .models import SourceCapture
+from .errors import (
+    ArtifactUnavailable,
+    ExtractionFailed,
+    SourceUnavailable,
+    SrdError,
+    UnsupportedContentType,
+)
+from .models import HostRenderedImport, SourceCapture
 from .pdfs import extract_pdf_bytes
 from .store import CaseStore
 
 MAX_BYTES = 15 * 1024 * 1024
 _ALLOWED_TYPES = {"text/html", "application/xhtml+xml", "application/pdf"}
+PUBLIC_HEADERS = {
+    "User-Agent": "StewardshipResearchDossier/0.3.3 (local research prototype)",
+    "Accept": "text/html,application/xhtml+xml,application/pdf;q=0.9,*/*;q=0.1",
+}
 Resolver = Callable[[str], Awaitable[set[str]]]
+Waiter = Callable[[float], Awaitable[None]]
 
 
 @dataclass(frozen=True)
@@ -39,36 +51,66 @@ async def _resolve_hostname(hostname: str) -> set[str]:
     return {str(result[4][0]) for result in results}
 
 
-async def _test_transport_resolver(_: str) -> set[str]:
-    """Mock transports do not make DNS connections, preserving isolated HTTP tests."""
-    return {"93.184.216.34"}
-
-
-async def _validate_public_url(url: str, resolver: Resolver) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise SourceUnavailable(url, "Only public HTTP(S) URLs are allowed.")
+async def _public_address(url: httpx.URL, resolver: Resolver) -> str:
+    hostname = url.host
+    if url.scheme not in {"http", "https"} or not hostname:
+        raise SourceUnavailable(str(url), "Only public HTTP(S) URLs are allowed.")
     try:
-        addresses = {str(ipaddress.ip_address(parsed.hostname))}
+        addresses = {str(ipaddress.ip_address(hostname))}
     except ValueError:
-        addresses = await resolver(parsed.hostname)
+        addresses = await resolver(hostname)
     if not addresses:
-        raise SourceUnavailable(url, "Hostname did not resolve to an address.")
+        raise SourceUnavailable(str(url), "Hostname did not resolve to an address.")
+    approved: list[ipaddress.IPv4Address | ipaddress.IPv6Address] = []
     for raw_address in addresses:
         try:
             address = ipaddress.ip_address(raw_address)
         except ValueError as error:
-            raise SourceUnavailable(url, "Hostname returned an invalid address.") from error
+            raise SourceUnavailable(str(url), "Hostname returned an invalid address.") from error
         if not address.is_global or address.is_multicast or address.is_reserved:
-            raise SourceUnavailable(url, "Private network targets are not allowed.")
+            raise SourceUnavailable(str(url), "Private network targets are not allowed.")
+        approved.append(address)
+    return str(min(approved, key=lambda address: (address.version, int(address))))
+
+
+class PinnedPublicTransport(httpx.AsyncBaseTransport):
+    """Connect only to an address validated for the current logical request."""
+
+    def __init__(
+        self,
+        resolver: Resolver,
+        inner: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
+        self._resolver = resolver
+        self._inner = inner or httpx.AsyncHTTPTransport(
+            trust_env=False, limits=httpx.Limits(max_connections=4)
+        )
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        address = await _public_address(request.url, self._resolver)
+        headers = request.headers.copy()
+        headers["host"] = request.url.netloc.decode("ascii")
+        pinned = httpx.Request(
+            request.method,
+            request.url.copy_with(host=address),
+            headers=headers,
+            stream=request.stream,
+            extensions={**request.extensions, "sni_hostname": request.url.host},
+        )
+        response = await self._inner.handle_async_request(pinned)
+        response.request = request
+        return response
+
+    async def aclose(self) -> None:
+        await self._inner.aclose()
 
 
 async def _fetch(
-    client: httpx.AsyncClient, url: str, semaphore: asyncio.Semaphore, resolver: Resolver
+    client: httpx.AsyncClient, url: str, semaphore: asyncio.Semaphore, wait: Waiter
 ) -> tuple[httpx.Response, bytes]:
     current_url = url
+    retried = False
     for _ in range(6):  # original request plus at most five redirects
-        await _validate_public_url(current_url, resolver)
         async with semaphore, client.stream("GET", current_url) as response:
             if response.is_redirect:
                 location = response.headers.get("location")
@@ -77,9 +119,18 @@ async def _fetch(
                         current_url, "Redirect response has no Location header."
                     )
                 current_url = urljoin(current_url, location)
-                await _validate_public_url(current_url, resolver)
                 continue
-            await _validate_public_url(str(response.url), resolver)
+            retry_after = response.headers.get("retry-after")
+            if (
+                response.status_code in {429, 503}
+                and not retried
+                and retry_after is not None
+                and retry_after.isdecimal()
+                and 1 <= int(retry_after) <= 30
+            ):
+                retried = True
+                await wait(float(retry_after))
+                continue
             if not 200 <= response.status_code < 300:
                 raise SourceUnavailable(current_url, f"HTTP {response.status_code}.")
             payload = bytearray()
@@ -97,10 +148,10 @@ async def _collect_one(
     run_id: str,
     url: str,
     semaphore: asyncio.Semaphore,
-    resolver: Resolver,
+    wait: Waiter,
 ) -> CaptureResult:
     try:
-        response, data = await _fetch(client, url, semaphore, resolver)
+        response, data = await _fetch(client, url, semaphore, wait)
         content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
         if content_type not in _ALLOWED_TYPES:
             raise UnsupportedContentType(url, content_type)
@@ -114,12 +165,14 @@ async def _collect_one(
             method = "static"
         final_url = str(response.url)
         host = urlparse(final_url).hostname
-        title = response.headers.get("x-srd-title") or host or "Captured source"
+        metadata = trafilatura.extract_metadata(data) if method == "static" else None
+        title = (metadata.title if metadata else None) or host or "Captured source"
+        publisher = (metadata.sitename if metadata else None) or host
         source = store.add_source(
             run_id,
             url=final_url,
             title=title,
-            publisher=host,
+            publisher=publisher,
             retrieval_method=method,
             text=text,
         )
@@ -136,16 +189,13 @@ def collect_sources(
     urls: list[str],
     transport: httpx.AsyncBaseTransport | None = None,
     resolver: Resolver | None = None,
+    wait: Waiter = asyncio.sleep,
 ) -> list[CaptureResult]:
     """Capture each URL independently; a failure never aborts peer URLs."""
 
-    run = store.get_run(run_id)
-    if run.state == "OPEN":
-        store.transition(run_id, "COLLECTING")
+    store.begin_collection(run_id)
 
-    active_resolver = resolver or (
-        _test_transport_resolver if transport is not None else _resolve_hostname
-    )
+    active_resolver = resolver or _resolve_hostname
 
     async def collect() -> list[CaptureResult]:
         timeout = httpx.Timeout(30.0, connect=15.0)
@@ -153,60 +203,50 @@ def collect_sources(
         async with httpx.AsyncClient(
             timeout=timeout,
             follow_redirects=False,
-            transport=transport,
+            transport=PinnedPublicTransport(active_resolver, transport),
             limits=limits,
+            headers=PUBLIC_HEADERS,
         ) as client:
             semaphore = asyncio.Semaphore(4)
             return await asyncio.gather(
-                *[
-                    _collect_one(client, store, run_id, url, semaphore, active_resolver)
-                    for url in urls
-                ]
+                *[_collect_one(client, store, run_id, url, semaphore, wait) for url in urls]
             )
 
-    results = asyncio.run(collect())
-    final_state = store.get_run(run_id).state
-    if final_state == "COLLECTING":
-        store.transition(
-            run_id, "SYNTHESIS_PENDING" if any(r.source for r in results) else "BLOCKED"
-        )
-    return results
+    return asyncio.run(collect())
 
 
-def collect_rendered_source(store: CaseStore, run_id: str, url: str) -> CaptureResult:
-    """Explicit optional rendered retrieval after static capture has failed."""
+def ingest_host_rendered_text(
+    store: CaseStore,
+    run_id: str,
+    path: Path,
+    metadata: HostRenderedImport,
+    resolver: Resolver | None = None,
+) -> SourceCapture:
     try:
-        asyncio.run(_validate_public_url(url, _resolve_hostname))
-        try:
-            from scrapling import Fetcher
-        except ImportError as error:
-            from .errors import OptionalDependencyMissing
-
-            raise OptionalDependencyMissing("scrapling[fetchers]") from error
-        response = Fetcher.get(url, timeout=30)
-        final_url = str(response.url)
-        asyncio.run(_validate_public_url(final_url, _resolve_hostname))
-        status = getattr(response, "status", getattr(response, "status_code", 200))
-        if not 200 <= status < 300:
-            raise SourceUnavailable(url, f"HTTP {status}.")
-        text = (trafilatura.extract(response.body, include_links=False) or "").strip()
-        if not text:
-            raise ExtractionFailed(url)
-        run = store.get_run(run_id)
-        if run.state == "OPEN":
-            store.transition(run_id, "COLLECTING")
-        source = store.add_source(
-            run_id,
-            url=final_url,
-            title=urlparse(final_url).hostname or "Rendered source",
-            publisher=urlparse(final_url).hostname,
-            retrieval_method="rendered",
-            text=text,
-        )
-        if store.get_run(run_id).state == "COLLECTING":
-            store.transition(run_id, "SYNTHESIS_PENDING")
-        return CaptureResult(url=url, source=source, error=None)
-    except SrdError as error:
-        return CaptureResult(url=url, source=None, error=error)
-    except (OSError, ValueError) as error:
-        return CaptureResult(url=url, source=None, error=SourceUnavailable(url, str(error)))
+        resolved = path.expanduser().resolve(strict=True)
+        if not resolved.is_file():
+            raise OSError
+        size = resolved.stat().st_size
+    except OSError as error:
+        raise ArtifactUnavailable(str(path)) from error
+    if size > MAX_BYTES:
+        raise SourceUnavailable(str(metadata.url), "Rendered text exceeds 15 MB limit.")
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except UnicodeError as error:
+        raise ExtractionFailed(str(metadata.url), "Rendered text is not valid UTF-8.") from error
+    except OSError as error:
+        raise ArtifactUnavailable(str(resolved)) from error
+    if not text.strip():
+        raise ExtractionFailed(str(metadata.url), "Rendered text artifact is empty.")
+    asyncio.run(_public_address(httpx.URL(str(metadata.url)), resolver or _resolve_hostname))
+    store.begin_collection(run_id)
+    return store.add_source(
+        run_id,
+        url=str(metadata.url),
+        title=metadata.title,
+        publisher=metadata.publisher,
+        retrieval_method="host_rendered",
+        text=text,
+        captured_at=metadata.captured_at,
+    )
