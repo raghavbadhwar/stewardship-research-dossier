@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "stewardship-research-dossier": {
+      "command": "bin/srd-mcp"
+    }
+  }
+}

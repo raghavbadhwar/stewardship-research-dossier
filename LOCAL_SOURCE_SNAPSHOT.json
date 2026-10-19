@@ -1,0 +1,18 @@
+{
+  "project": "Stewardship Research Dossier",
+  "copy_id": "stewardship-research-dossier-01",
+  "snapshot_date": "2026-10-19",
+  "original_local_head": "0382a400b9461bb01689bfedb070e29231baf5a4",
+  "original_history_included": false,
+  "scope": "Reviewed current source snapshot, not a full disk backup. Dependencies, generated builds, private data, credentials and workflow execution definitions omitted. No build or production-readiness claim.",
+  "source_file_count": 503,
+  "source_manifest_sha256": "3ab6e9d0c2583b99ef3e15e365bbc0c32a6571f01ec66f8bb5b12a1ab2d5eb03",
+  "exclusion_reason_counts": {
+    "workflow_execution_prevention": 10,
+    "unclassified_file_type": 6,
+    "binary_asset_needs_review": 2,
+    "private_data_binary_or_generated_artifact": 1,
+    "generated_agent_or_compiler_output": 2
+  },
+  "original_source_untouched": true
+}

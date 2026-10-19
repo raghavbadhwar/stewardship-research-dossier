@@ -1,0 +1,29 @@
+[
+  {
+    "url": "https://www.microsoft.com/en-us/corporate-responsibility/reporting-governance",
+    "title": "Responsible Corporate Reporting and Governance | Microsoft CSR",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-14T09:00:00+00:00",
+    "text_file": "S-0004.txt",
+    "content_sha256": "8ac513a877487f34f629ff73e32dda8ff68ca446252bb1cdda4b4b6b04c68dfa"
+  },
+  {
+    "url": "https://www.microsoft.com/en-us/Investor/corporate-governance/framework",
+    "title": "Microsoft Investor Relations - Corporate Governance Framework",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-14T09:05:00+00:00",
+    "text_file": "S-0005.txt",
+    "content_sha256": "2b6a00ff21ebd4343b4654c90a4ba07ab440c947a0f1aab4dcb6420b600bbafb"
+  },
+  {
+    "url": "https://www.microsoft.com/en-us/corporate-responsibility/responsible-ai-transparency-report/",
+    "title": "Responsible AI Transparency Report | Microsoft",
+    "publisher": "Microsoft",
+    "retrieval_method": "static",
+    "captured_at": "2026-08-14T09:10:00+00:00",
+    "text_file": "S-0006.txt",
+    "content_sha256": "74ab6255c2fd2fca75eebd1420e6e564dde7c029bcaccaf69884baadf85fd818"
+  }
+]
